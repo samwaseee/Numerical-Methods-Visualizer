@@ -164,7 +164,7 @@ def show_result_page(header_container):
 
     with col_viz:
         st.markdown("**Select Method to Visualize**")
-        vis_iters = st.number_input("Max Iterations for Graph", value=20)
+        vis_iters = st.number_input("Max Iterations for Graph", value=100)
         
         methods = ["Newton-Raphson", "Bisection Method", "False Position", "Secant Method", "Fixed Point Iteration"]
         
@@ -187,3 +187,28 @@ def show_result_page(header_container):
                 st.session_state.params = base_params
                 st.session_state.page = "dashboard"
                 st.rerun()
+
+        st.markdown("---")
+        
+        # --- NEW: COMPARISON MODE TRIGGER ---
+        st.subheader("⚔️ Compare Two Methods")
+        c_m1, c_m2 = st.columns(2)
+        with c_m1:
+            m1 = st.selectbox("Method A", methods, index=0)
+        with c_m2:
+            m2 = st.selectbox("Method B", methods, index=1)
+            
+        if st.button("Start Comparison Race", type="primary", use_container_width=True):
+            st.session_state.params = {
+                "method": "Comparison Mode",
+                "method_a": m1,
+                "method_b": m2,
+                "iters": vis_iters,
+                "x0": st.session_state.x0_val,
+                "a": st.session_state.range_a,
+                "b": st.session_state.range_b,
+                "g_str": st.session_state.g_str
+            }
+            st.session_state.page = "dashboard"
+            st.query_params["page"] = "dashboard"
+            st.rerun()

@@ -23,7 +23,7 @@ class EquationSolver:
     # --- BENCHMARKING ENGINE ---
     def run_benchmark(self, x0, a, b, g_str, tol=0.01):
         results = []
-        max_iter = 20
+        max_iter = 100
 
         def get_metrics(history):
             if not history: return max_iter, None, 100.0, "Failed"

@@ -5,15 +5,28 @@ import numpy as np
 from algorithms import EquationSolver
 from components.header import render_function_header
 
+def vspace(height_px):
+    """Creates a vertical gap of specific height in pixels."""
+    st.markdown(f'<div style="height: {height_px}px;"></div>', unsafe_allow_html=True)
+
 # --- URL SYNCING CALLBACKS ---
 def sync_to_url(key):
     val = st.session_state[key]
     st.query_params[key] = str(val)
     st.session_state.bench_data = None
 
-def update_x0():
+def update_x0(new_val=None):
     """Specific handler for x0 to sync memory and URL"""
-    st.session_state.x0_val = st.session_state.input_x0
+    if new_val is not None:
+        val = float(new_val)
+        st.session_state.x0_val = val
+        # --- CRITICAL FIX: Update the widget key directly ---
+        st.session_state.input_x0 = val 
+        # --------------------------------------------------
+    else:
+        # If triggered by the widget itself, read from the key
+        st.session_state.x0_val = st.session_state.input_x0
+        
     st.query_params["x0"] = str(st.session_state.x0_val)
     st.session_state.bench_data = None
 
@@ -42,8 +55,6 @@ def on_function_change():
 
 def show_input_page(header_container):
     # --- FIX: AUTO-REPAIR BLANK G(X) ---
-    # This runs every time the page loads. 
-    # If g(x) is missing/empty, we regenerate it immediately.
     current_g = st.session_state.get('g_str', '')
     if not current_g or current_g.strip() == "":
         func = st.session_state.get('func_str', "x^2 - 4")
@@ -73,15 +84,17 @@ def show_input_page(header_container):
             with header_container.container():
                 render_function_header(solver)
             
-            # --- BOUNDARY ASSISTANT SECTION ---
+            # --- POLYNOMIAL ANALYSIS ASSISTANT ---
             st.divider()
             
-            if st.button("🤖 Analyze Root Bounds (Fujiwara)", use_container_width=True):
+            if st.button("🤖 Polynomial Analysis (Bounds & Guess)", use_container_width=True):
                 st.session_state.show_bounds = True
             
             if st.session_state.show_bounds:
                 with st.container(border=True):
-                    calculated_bound = None
+                    st.markdown("### 🧬 Polynomial Analysis")
+                    st.caption("These tools work **only for Polynomials** (e.g., $ax^n + \dots$).")
+                    
                     try:
                         s_clean = solver.original_str.replace("^", "**").replace(" ", "")
                         x_sym = sp.symbols('x')
@@ -90,42 +103,50 @@ def show_input_page(header_container):
                         if expr.is_polynomial(x_sym):
                             poly = sp.Poly(expr, x_sym)
                             coeffs = [float(c) for c in poly.all_coeffs()]
-                            
+                            degree = len(coeffs) - 1
+
                             if len(coeffs) >= 2:
-                                an = abs(coeffs[0])
-                                degree = len(coeffs) - 1
+                                # --- MATH CALCULATIONS ---
                                 
+                                # 1. FUJIWARA BOUND (For Bracketing)
+                                an = abs(coeffs[0])
                                 fujiwara_vals = []
                                 for i in range(1, degree + 1):
                                     val = abs(coeffs[i] / an)**(1/i)
                                     fujiwara_vals.append(val)
-                                
                                 fujiwara_bound = 2 * max(fujiwara_vals) if fujiwara_vals else 10.0
                                 calculated_bound = round(fujiwara_bound, 2)
                                 
-                                st.markdown("### 📊 Boundary Analysis")
-                                st.caption("Using **Fujiwara's Bound** (Tighter than Cauchy):")
-                                st.latex(r"R = 2 \cdot \max_{1 \le i \le n} \left| \frac{a_{n-i}}{a_n} \right|^{1/i}")
-                                
-                                c_metric, c_btn = st.columns([2, 1])
-                                with c_metric:
-                                    st.metric("Suggested Interval", f"± {calculated_bound}")
-                                with c_btn:
-                                    st.write("") # Spacer
-                                    def apply_bounds():
+                                # 2. CENTROID OF ROOTS (For Initial Guess)
+                                an_1 = coeffs[1] if len(coeffs) > 1 else 0
+                                suggested_x0 = -an_1 / (degree * coeffs[0])
+                                suggested_x0 = round(suggested_x0, 2)
+
+                                # --- DISPLAY UI (COLUMN LAYOUT) ---
+                                col_bracket, col_guess = st.columns(2)
+
+                                with col_bracket:
+                                    st.markdown("#### 🎯 Bracketing")
+                                    st.caption("**Fujiwara's Bound:**")
+                                    st.latex(r"R = 2 \cdot \max \left| \frac{a_{n-i}}{a_n} \right|^{1/i}")
+                                    st.metric("Safe Interval", f"± {calculated_bound}")
+                                    if st.button("Apply Bounds", use_container_width=True):
                                         update_bounds(-calculated_bound, calculated_bound)
-                                    
-                                    st.button(
-                                        "Apply Interval", 
-                                        on_click=apply_bounds, 
-                                        icon="🎯", 
-                                        use_container_width=True,
-                                        key="btn_apply_bounds"
-                                    )
+
+                                with col_guess:
+                                    st.markdown("#### 💡 Initial Guess")
+                                    st.caption("**Centroid of Roots:**")
+                                    st.latex(r"x_0 = -\frac{a_{n-1}}{n \cdot a_n}")
+                                    vspace(0)
+                                    st.metric("Suggested Start", f"{suggested_x0}")
+                                    if st.button("Apply Guess", use_container_width=True):
+                                        update_x0(suggested_x0)
+                                        st.rerun()
+                                        
                             else:
                                 st.warning("Polynomial degree too low.")
                         else:
-                            st.warning("Boundary analysis only works for Polynomials.")
+                            st.warning("⚠️ Analysis skipped. Function is not a polynomial.")
                     except Exception as e:
                         st.error(f"Analysis failed: {str(e)}")
             # ---------------------------------------
@@ -137,6 +158,25 @@ def show_input_page(header_container):
     with col_config:
         with st.container(border=True):
             st.subheader("2. Configuration")
+            st.markdown(
+                """
+        <style>
+        /* 1. Target the flex container of the radio button option */
+        div[role="radiogroup"] label {
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        /* 2. Target the text inside the radio button */
+        div[role="radiogroup"] label p {
+            font-size: 24px !important;
+            font-weight: 600 !important;
+            margin-bottom: 0px !important;
+        }
+        
+        </style>
+            """,
+            unsafe_allow_html=True)
             app_mode = st.radio(
                 "Operation Mode", 
                 ["Single Root Solver", "Multi-Root Scanner"], 
@@ -178,14 +218,13 @@ def show_input_page(header_container):
                         "Guess (x0)", 
                         value=st.session_state.x0_val, 
                         key="input_x0", 
-                        on_change=update_x0
+                        on_change=lambda: update_x0(None)
                     )
                 with c2: pass 
                 c3, c4 = st.columns(2)
                 with c3: st.number_input("Bracket Low (a)", key="range_a", on_change=sync_to_url, args=("range_a",))
                 with c4: st.number_input("Bracket High (b)", key="range_b", on_change=sync_to_url, args=("range_b",))
                 
-                # Input for g(x) - now guaranteed to have a value
                 st.text_input("g(x) [Fixed Point]", key="g_str", on_change=sync_to_url, args=("g_str",))
 
                 if st.button("Run Benchmark", type="primary", use_container_width=True, icon="🚀"):
