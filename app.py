@@ -39,7 +39,6 @@ if 'range_b' not in st.session_state:
     st.session_state.range_b = get_from_url("b", 10.0, float)
 
 if 'g_str' not in st.session_state: 
-    # Logic: If 'g' is in URL, use it. Else, calculate default from f(x)
     url_g = get_from_url("g", "")
     if url_g:
         st.session_state.g_str = url_g
