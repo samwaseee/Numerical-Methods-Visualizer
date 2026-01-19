@@ -3,11 +3,78 @@ import plotly.graph_objects as go
 import numpy as np
 import pandas as pd
 
+def _safe_real(value):
+    """Convert complex numbers to real parts, handle arrays and scalars"""
+    if isinstance(value, (list, np.ndarray)):
+        return np.real(value).astype(float)
+    elif isinstance(value, complex):
+        return float(value.real)
+    elif isinstance(value, np.complexfloating):
+        return float(np.real(value))
+    return float(value)
+
+def _safe_imag(value):
+    """Convert complex numbers to imaginary parts, handle arrays and scalars"""
+    if isinstance(value, (list, np.ndarray)):
+        return np.imag(value).astype(float)
+    elif isinstance(value, complex):
+        return float(value.imag)
+    elif isinstance(value, np.complexfloating):
+        return float(np.imag(value))
+    return 0.0
+
+def render_complex_plane_chart(roots_complex):
+    """Visualize complex roots on the complex plane (Argand diagram)"""
+    if not roots_complex or len(roots_complex) == 0:
+        st.info("No complex roots found")
+        return
+    
+    # Round to 4 decimal places
+    real_parts = [round(_safe_real(r), 4) for r in roots_complex]
+    imag_parts = [round(_safe_imag(r), 4) for r in roots_complex]
+    
+    # Create labels with 4 decimal places
+    labels = [f"{real_parts[i]:.4f} + {imag_parts[i]:.4f}i" for i in range(len(real_parts))]
+    
+    fig = go.Figure()
+    
+    # Add axes
+    if real_parts and imag_parts:
+        max_val = max(max(abs(r) for r in real_parts), max(abs(i) for i in imag_parts)) * 1.2
+        fig.add_hline(y=0, line_color="gray", line_width=2)
+        fig.add_vline(x=0, line_color="gray", line_width=2)
+    
+    # Plot complex roots
+    fig.add_trace(go.Scatter(
+        x=real_parts,
+        y=imag_parts,
+        mode='markers+text',
+        name='Complex Roots',
+        text=labels,
+        textposition='top center',
+        marker=dict(color='#f43f5e', size=12, symbol='diamond', line=dict(width=2, color='#be123c')),
+        hovertemplate='<b>Root</b><br>Real: %{x:.4f}<br>Imaginary: %{y:.4f}<extra></extra>'
+    ))
+    
+    fig.update_layout(
+        title="Complex Roots (Argand Diagram)",
+        xaxis_title="Real Part",
+        yaxis_title="Imaginary Part",
+        height=500,
+        margin=dict(l=20, r=20, t=40, b=20),
+        hovermode="closest",
+        xaxis=dict(scaleanchor="y", scaleratio=1),
+        yaxis=dict(scaleanchor="x", scaleratio=1)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
 def render_scanner_chart(solver, a, b, step, roots, scan_log):
     # 1. Prepare Data
     x_vals = np.linspace(a, b, 500)
     try:
         y_vals = solver.f(x_vals)
+        y_vals = _safe_real(y_vals)
     except:
         y_vals = np.zeros_like(x_vals)
 
@@ -60,7 +127,7 @@ def render_scanner_chart(solver, a, b, step, roots, scan_log):
         
         # Add a point for where we are checking
         fig.add_trace(go.Scatter(
-            x=[x_curr], y=[solver.f(x_curr)],
+            x=[x_curr], y=[_safe_real(solver.f(x_curr))],
             mode='markers', name='Check',
             marker=dict(color='yellow', size=8)
         ))
@@ -118,6 +185,7 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
     x_range = np.linspace(plot_min, plot_max, 400)
     try:
         y_range = solver.f(x_range)
+        y_range = _safe_real(y_range)
     except:
         y_range = np.zeros_like(x_range)
 
@@ -139,13 +207,13 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
         if not current_df.empty:
             x_start = current_df.iloc[0]['x_old']
             path_x.append(x_start); path_y.append(0)
-            path_x.append(x_start); path_y.append(current_df.iloc[0]['g(x)']) 
+            path_x.append(x_start); path_y.append(_safe_real(current_df.iloc[0]['g(x)'])) 
             
             for i, row in current_df.iterrows():
                 val = row['x_new']
                 path_x.append(val); path_y.append(val)
                 if i < len(current_df)-1:
-                    path_x.append(val); path_y.append(current_df.iloc[i+1]['g(x)'])
+                    path_x.append(val); path_y.append(_safe_real(current_df.iloc[i+1]['g(x)']))
 
         fig.add_trace(go.Scatter(
             x=path_x, y=path_y, 
@@ -159,7 +227,7 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
     elif method_name == "Newton-Raphson":
         for i, row in current_df.iterrows():
             x_old = row['x_old']
-            fx = row['f(x)']
+            fx = _safe_real(row['f(x)'])
             x_new = row['x_new']
             
             fig.add_trace(go.Scatter(
@@ -182,8 +250,8 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
             x_new = row['x_new']
             
             try:
-                f0 = solver.f(x0)
-                f1 = solver.f(x1)
+                f0 = _safe_real(solver.f(x0))
+                f1 = _safe_real(solver.f(x1))
                 
                 fig.add_trace(go.Scatter(
                     x=[x0, x1, x_new], y=[f0, f1, 0],
@@ -213,10 +281,61 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
         # ---------------------------------
         
         # Show calculated root estimate 'c'
+        c_root = _safe_real(last_row['c (root)']) if isinstance(last_row['c (root)'], (complex, np.complexfloating)) else last_row['c (root)']
         fig.add_trace(go.Scatter(
-            x=[last_row['c (root)']], y=[0],
+            x=[c_root], y=[0],
             mode='markers', marker=dict(color='red', size=10, symbol='x'),
             name='Current Root (c)'
+        ))
+
+    # E. Brent's Method (Adaptive - shows convergence path)
+    elif method_name == "Brent's Method":
+        path_x = [_safe_real(row['x_new']) for i, row in current_df.iterrows()]
+        path_y = [_safe_real(solver.f(x)) for x in path_x]
+        
+        fig.add_trace(go.Scatter(
+            x=path_x, y=path_y,
+            mode='lines+markers', name="Brent's Path",
+            line=dict(color='#06b6d4', width=2),
+            marker=dict(size=6, symbol='diamond')
+        ))
+        
+        # Show strategy used
+        if 'Method Used' in current_df.columns:
+            strategy_colors = {'Bisection': '#ef4444', 'Interpolation': '#3b82f6', 'Converged': '#10b981'}
+            for i, row in current_df.iterrows():
+                strategy = row.get('Method Used', 'Unknown')
+                color = strategy_colors.get(strategy, 'gray')
+                fig.add_trace(go.Scatter(
+                    x=[_safe_real(row['x_new'])], y=[_safe_real(solver.f(_safe_real(row['x_new'])))],
+                    mode='markers',
+                    marker=dict(size=8, color=color, symbol='star'),
+                    name=f"{strategy}" if i == step_idx-1 else None,
+                    showlegend=(i == step_idx-1)
+                ))
+
+    # F. Halley's Method (Similar to Newton - shows tangent-like convergence)
+    elif method_name == "Halley's Method":
+        path_x = [_safe_real(row['x_new']) for i, row in current_df.iterrows()]
+        path_y = [_safe_real(solver.f(x)) for x in path_x]
+        
+        fig.add_trace(go.Scatter(
+            x=path_x, y=path_y,
+            mode='lines+markers', name="Halley's Path",
+            line=dict(color='#8b5cf6', width=2),
+            marker=dict(size=6, symbol='square')
+        ))
+
+    # G. Muller's Method (Shows parabolic approximation path)
+    elif method_name == "Muller's Method":
+        path_x = [_safe_real(row['x_new']) for i, row in current_df.iterrows()]
+        path_y = [_safe_real(solver.f(x)) for x in path_x]
+        
+        fig.add_trace(go.Scatter(
+            x=path_x, y=path_y,
+            mode='lines+markers', name="Muller's Path",
+            line=dict(color='#f43f5e', width=2),
+            marker=dict(size=6, symbol='triangle-up')
         ))
 
     fig.update_layout(

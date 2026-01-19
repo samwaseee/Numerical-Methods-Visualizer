@@ -86,7 +86,6 @@ def show_result_page(header_container):
         render_function_header(solver)
 
     # --- THE BACK BUTTON ---
-    # Clicking this now triggers the full reset defined above
     if st.button("Back to Home", icon="🏠", on_click=trigger_home): pass
     
     st.title("Benchmark Results & Analysis")
@@ -97,13 +96,15 @@ def show_result_page(header_container):
             return 'color: green; font-weight: bold' if val == "Converged" else 'color: red'
         st.dataframe(
             df.style.applymap(style_status, subset=['Status']).format({"Error %": "{:.4f}", "Root Found": "{:.4f}"}), 
-            use_container_width=True
+            use_container_width=True,
+            hide_index=True
         )
 
     st.markdown("---")
 
     st.subheader("🛠️ Modify Parameters")
     
+    # --- FIXED POINT DIAGNOSTIC ---
     if st.session_state.bench_data is not None:
         fixed_row = st.session_state.bench_data[st.session_state.bench_data['Method'] == "Fixed Point"]
         if not fixed_row.empty and "Converged" not in fixed_row.iloc[0]['Status']:
@@ -166,7 +167,12 @@ def show_result_page(header_container):
         st.markdown("**Select Method to Visualize**")
         vis_iters = st.number_input("Max Iterations for Graph", value=100)
         
-        methods = ["Newton-Raphson", "Bisection Method", "False Position", "Secant Method", "Fixed Point Iteration"]
+        # --- UPDATED LIST OF METHODS ---
+        methods = [
+            "Newton-Raphson", "Bisection Method", "False Position", 
+            "Secant Method", "Fixed Point Iteration",
+            "Brent's Method", "Halley's Method", "Muller's Method"
+        ]
         
         cols = st.columns(3)
         for i, m in enumerate(methods):
@@ -174,10 +180,15 @@ def show_result_page(header_container):
                 base_params = {"method": m, "iters": vis_iters, "tol": 0.01}
                 st.query_params["page"] = "dashboard" 
                 
-                if m in ["Newton-Raphson", "Secant Method"]:
+                # Assign parameters based on method type
+                if m in ["Newton-Raphson", "Halley's Method"]:
                     base_params["x0"] = st.session_state.x0_val
-                    if m == "Secant Method": base_params["x1"] = st.session_state.x0_val + 1.0
-                elif m in ["Bisection Method", "False Position"]:
+                elif m == "Secant Method":
+                    base_params["x0"] = st.session_state.x0_val
+                    base_params["x1"] = st.session_state.x0_val + 1.0
+                elif m == "Muller's Method":
+                    base_params["x0"] = st.session_state.x0_val
+                elif m in ["Bisection Method", "False Position", "Brent's Method"]:
                     base_params["a"] = st.session_state.range_a
                     base_params["b"] = st.session_state.range_b
                 elif m == "Fixed Point Iteration":
@@ -190,7 +201,7 @@ def show_result_page(header_container):
 
         st.markdown("---")
         
-        # --- NEW: COMPARISON MODE TRIGGER ---
+        # --- COMPARISON MODE TRIGGER ---
         st.subheader("⚔️ Compare Two Methods")
         c_m1, c_m2 = st.columns(2)
         with c_m1:
@@ -199,16 +210,19 @@ def show_result_page(header_container):
             m2 = st.selectbox("Method B", methods, index=1)
             
         if st.button("Start Comparison Race", type="primary", use_container_width=True):
-            st.session_state.params = {
-                "method": "Comparison Mode",
-                "method_a": m1,
-                "method_b": m2,
-                "iters": vis_iters,
-                "x0": st.session_state.x0_val,
-                "a": st.session_state.range_a,
-                "b": st.session_state.range_b,
-                "g_str": st.session_state.g_str
-            }
-            st.session_state.page = "dashboard"
-            st.query_params["page"] = "dashboard"
-            st.rerun()
+            if m1 == m2:
+                st.error("Please select two **different** methods to compare.", icon="🚫")
+            else:
+                st.session_state.params = {
+                    "method": "Comparison Mode",
+                    "method_a": m1,
+                    "method_b": m2,
+                    "iters": vis_iters,
+                    "x0": st.session_state.x0_val,
+                    "a": st.session_state.range_a,
+                    "b": st.session_state.range_b,
+                    "g_str": st.session_state.g_str
+                }
+                st.session_state.page = "dashboard"
+                st.query_params["page"] = "dashboard"
+                st.rerun()

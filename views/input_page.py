@@ -108,7 +108,7 @@ def show_input_page(header_container):
                             if len(coeffs) >= 2:
                                 # --- MATH CALCULATIONS ---
                                 
-                                # 1. FUJIWARA BOUND (For Bracketing)
+                                # 1. FUJIWARA BOUND (Root isolation radius)
                                 an = abs(coeffs[0])
                                 fujiwara_vals = []
                                 for i in range(1, degree + 1):
@@ -121,17 +121,53 @@ def show_input_page(header_container):
                                 an_1 = coeffs[1] if len(coeffs) > 1 else 0
                                 suggested_x0 = -an_1 / (degree * coeffs[0])
                                 suggested_x0 = round(suggested_x0, 2)
+                                
+                                # 3. DYNAMIC BRACKET SEARCH (Find interval with sign change)
+                                def find_best_bracket(f, center, radius, steps=20):
+                                    """Search for interval [a,b] where f(a)*f(b) < 0"""
+                                    best_bracket = None
+                                    best_span = float('inf')
+                                    
+                                    test_points = np.linspace(center - radius, center + radius, steps)
+                                    f_vals = []
+                                    for pt in test_points:
+                                        try:
+                                            f_vals.append((pt, float(f(pt))))
+                                        except:
+                                            f_vals.append((pt, np.inf))
+                                    
+                                    # Search for sign changes
+                                    for i in range(len(f_vals) - 1):
+                                        x1, y1 = f_vals[i]
+                                        x2, y2 = f_vals[i + 1]
+                                        
+                                        if y1 * y2 < 0:  # Sign change found!
+                                            span = x2 - x1
+                                            if span < best_span:
+                                                best_span = span
+                                                best_bracket = (round(x1, 2), round(x2, 2))
+                                    
+                                    return best_bracket
+
+                                # Find best bracket around the Fujiwara bound
+                                best_bracket = find_best_bracket(solver.f, suggested_x0, fujiwara_bound)
 
                                 # --- DISPLAY UI (COLUMN LAYOUT) ---
                                 col_bracket, col_guess = st.columns(2)
 
                                 with col_bracket:
                                     st.markdown("#### 🎯 Bracketing")
-                                    st.caption("**Fujiwara's Bound:**")
+                                    st.caption("**Fujiwara's Bound:** (root isolation radius)")
                                     st.latex(r"R = 2 \cdot \max \left| \frac{a_{n-i}}{a_n} \right|^{1/i}")
-                                    st.metric("Safe Interval", f"± {calculated_bound}")
-                                    if st.button("Apply Bounds", use_container_width=True):
-                                        update_bounds(-calculated_bound, calculated_bound)
+                                    
+                                    if best_bracket:
+                                        a, b = best_bracket
+                                        st.metric("Suggested Bracket", f"[{a}, {b}]")
+                                        if st.button("Apply Bounds", use_container_width=True):
+                                            update_bounds(a, b)
+                                            st.session_state.bench_data = None
+                                    else:
+                                        st.warning(f"⚠️ No sign change found in [{-calculated_bound}, {calculated_bound}]")
 
                                 with col_guess:
                                     st.markdown("#### 💡 Initial Guess")
