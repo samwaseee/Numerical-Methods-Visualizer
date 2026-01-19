@@ -48,6 +48,10 @@ def render_comparison_chart(solver, hist_a, name_a, hist_b, name_b):
     x_range = np.linspace(plot_min, plot_max, 400)
     try: y_range = solver.f(x_range)
     except: y_range = np.zeros_like(x_range)
+    
+    def safe_f(val):
+        try: return solver.f(val)
+        except: return 0.0
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=x_range, y=y_range, name='f(x)', line=dict(color="#c3c8f6", width=3)))
@@ -57,7 +61,7 @@ def render_comparison_chart(solver, hist_a, name_a, hist_b, name_b):
     # Plot Method A (Circles)
     if hist_a:
         path_x = [get_x(r) for r in hist_a]
-        path_y = [solver.f(x) for x in path_x]
+        path_y = [safe_f(x) for x in path_x]
         fig.add_trace(go.Scatter(
             x=path_x, y=path_y, 
             mode='lines+markers', name=name_a,
@@ -68,7 +72,7 @@ def render_comparison_chart(solver, hist_a, name_a, hist_b, name_b):
     # Plot Method B (Squares)
     if hist_b:
         path_x = [get_x(r) for r in hist_b]
-        path_y = [solver.f(x) for x in path_x]
+        path_y = [safe_f(x) for x in path_x]
         fig.add_trace(go.Scatter(
             x=path_x, y=path_y, 
             mode='lines+markers', name=name_b,

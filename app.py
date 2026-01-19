@@ -15,7 +15,6 @@ def get_from_url(key, default, cast_func=str):
     if key in qp:
         try:
             val = cast_func(qp[key])
-            # FIX: If value is empty string/None, use default
             return val if val else default 
         except:
             return default

@@ -189,6 +189,10 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
     except:
         y_range = np.zeros_like(x_range)
 
+    def safe_f(val):
+        try: return _safe_real(solver.f(val))
+        except: return 0.0
+
     fig = go.Figure()
     
     # 1. Base Function
@@ -291,7 +295,7 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
     # E. Brent's Method (Adaptive - shows convergence path)
     elif method_name == "Brent's Method":
         path_x = [_safe_real(row['x_new']) for i, row in current_df.iterrows()]
-        path_y = [_safe_real(solver.f(x)) for x in path_x]
+        path_y = [safe_f(x) for x in path_x]
         
         fig.add_trace(go.Scatter(
             x=path_x, y=path_y,
@@ -307,7 +311,7 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
                 strategy = row.get('Method Used', 'Unknown')
                 color = strategy_colors.get(strategy, 'gray')
                 fig.add_trace(go.Scatter(
-                    x=[_safe_real(row['x_new'])], y=[_safe_real(solver.f(_safe_real(row['x_new'])))],
+                    x=[_safe_real(row['x_new'])], y=[safe_f(_safe_real(row['x_new']))],
                     mode='markers',
                     marker=dict(size=8, color=color, symbol='star'),
                     name=f"{strategy}" if i == step_idx-1 else None,
@@ -317,7 +321,7 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
     # F. Halley's Method (Similar to Newton - shows tangent-like convergence)
     elif method_name == "Halley's Method":
         path_x = [_safe_real(row['x_new']) for i, row in current_df.iterrows()]
-        path_y = [_safe_real(solver.f(x)) for x in path_x]
+        path_y = [safe_f(x) for x in path_x]
         
         fig.add_trace(go.Scatter(
             x=path_x, y=path_y,
@@ -329,7 +333,7 @@ def render_iteration_chart(solver, history, method_name, g_str=None):
     # G. Muller's Method (Shows parabolic approximation path)
     elif method_name == "Muller's Method":
         path_x = [_safe_real(row['x_new']) for i, row in current_df.iterrows()]
-        path_y = [_safe_real(solver.f(x)) for x in path_x]
+        path_y = [safe_f(x) for x in path_x]
         
         fig.add_trace(go.Scatter(
             x=path_x, y=path_y,
