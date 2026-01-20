@@ -57,6 +57,8 @@ def render_navbar():
         
         <div class="navbar">
             <img src="data:image/svg+xml;base64,{b64_logo}">
-            <div class="navbar-title">Numerical Methods Visualizer</div>
+            <div class="navbar-title">
+                <h1 style="font-size: 2rem; font-weight: 700; background: -webkit-linear-gradient(45deg, #4EA5FF, #A855F7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Numerical Methods Visualizer</h1>
+            </div>
         </div>
     """, unsafe_allow_html=True)

@@ -5,6 +5,46 @@ import numpy as np
 from algorithms import EquationSolver
 from components.header import render_function_header
 
+# --- STORAGE & STATE INITIALIZATION ---
+def get_from_url(key, default, cast_func=str):
+    """Safely gets a value from the URL. Treats empty strings as Default."""
+    qp = st.query_params
+    if key in qp:
+        try:
+            val = cast_func(qp[key])
+            return val if val else default 
+        except:
+            return default
+    return default
+
+def initialize_session_state():
+    # Page State
+    if 'page' not in st.session_state:
+        st.session_state.page = get_from_url("page", "landing")
+
+    # Inputs (with robust defaults)
+    if 'func_str' not in st.session_state: 
+        st.session_state.func_str = get_from_url("func", "x^4 + 6*x^3 - 77*x^2 - 330*x + 400")
+
+    if 'x0_val' not in st.session_state: 
+        st.session_state.x0_val = get_from_url("x0", 3.0, float)
+
+    if 'range_a' not in st.session_state: 
+        st.session_state.range_a = get_from_url("a", -10.0, float)
+
+    if 'range_b' not in st.session_state: 
+        st.session_state.range_b = get_from_url("b", 10.0, float)
+
+    if 'g_str' not in st.session_state: 
+        url_g = get_from_url("g", "")
+        st.session_state.g_str = url_g if url_g else f"x - ({st.session_state.func_str})/1000"
+
+    if 'scanner_step' not in st.session_state:
+        st.session_state.scanner_step = get_from_url("step", 0.15, float)
+
+    if 'solver' not in st.session_state: st.session_state.solver = None
+    if 'bench_data' not in st.session_state: st.session_state.bench_data = None
+
 def vspace(height_px):
     """Creates a vertical gap of specific height in pixels."""
     st.markdown(f'<div style="height: {height_px}px;"></div>', unsafe_allow_html=True)
@@ -30,9 +70,16 @@ def update_x0(new_val=None):
     st.query_params["x0"] = str(st.session_state.x0_val)
     st.session_state.bench_data = None
 
+def update_from_widget(storage_key, widget_key):
+    st.session_state[storage_key] = st.session_state[widget_key]
+    st.query_params[storage_key] = str(st.session_state[storage_key])
+    st.session_state.bench_data = None
+
 def update_bounds(new_a, new_b):
     st.session_state.range_a = float(new_a)
     st.session_state.range_b = float(new_b)
+    st.session_state.input_a = float(new_a)
+    st.session_state.input_b = float(new_b)
     st.query_params["a"] = str(new_a)
     st.query_params["b"] = str(new_b)
 
@@ -40,9 +87,13 @@ def clear_bench_data():
     st.session_state.bench_data = None
 
 def on_function_change():
+    if "input_func" in st.session_state:
+        st.session_state.func_str = st.session_state.input_func
+
     new_func = st.session_state.func_str
     new_g = f"x - ({new_func})/1000"
     st.session_state.g_str = new_g
+    st.session_state.input_g = new_g
     
     # RESET State
     st.session_state.bench_data = None
@@ -54,6 +105,13 @@ def on_function_change():
     st.query_params["g"] = new_g
 
 def show_input_page(header_container):
+    initialize_session_state()
+
+    if st.button("Back to Home", icon=":material/home:"):
+        st.session_state.page = "landing"
+        st.query_params["page"] = "landing"
+        st.rerun()
+
     # --- FIX: AUTO-REPAIR BLANK G(X) ---
     current_g = st.session_state.get('g_str', '')
     if not current_g or current_g.strip() == "":
@@ -66,33 +124,35 @@ def show_input_page(header_container):
     if "show_bounds" not in st.session_state:
         st.session_state.show_bounds = False
 
-    col_input, col_config = st.columns([1.3, 1])
+    st.subheader("Define Problem")
+    
+    st.text_input(
+        "Function f(x)", 
+        value=st.session_state.func_str,
+        key="input_func", 
+        on_change=on_function_change
+    )
+    
+    solver = EquationSolver(st.session_state.func_str)
+    if solver.valid: 
+        st.session_state.solver = solver 
+        with header_container.container():
+            render_function_header(solver)
+    else:
+        st.error("Invalid Syntax")
 
-    # --- LEFT COLUMN: PROBLEM DEFINITION ---
-    with col_input:
-        st.subheader("1. Define Problem")
-        
-        st.text_input(
-            "Function f(x)", 
-            key="func_str", 
-            on_change=on_function_change
-        )
-        
-        solver = EquationSolver(st.session_state.func_str)
-        if solver.valid: 
-            st.session_state.solver = solver 
-            with header_container.container():
-                render_function_header(solver)
-            
-            # --- POLYNOMIAL ANALYSIS ASSISTANT ---
-            st.divider()
-            
-            if st.button("🤖 Polynomial Analysis (Bounds & Guess)", use_container_width=True):
+    st.divider()
+
+    col_analysis, col_config = st.columns([1.3, 1])
+
+    with col_analysis:
+        if solver.valid:
+            if st.button("Polynomial Analysis (Bounds & Guess)", use_container_width=True, icon=":material/analytics:"):
                 st.session_state.show_bounds = True
             
             if st.session_state.show_bounds:
                 with st.container(border=True):
-                    st.markdown("### 🧬 Polynomial Analysis")
+                    st.markdown("### Polynomial Analysis")
                     st.caption("These tools work **only for Polynomials** (e.g., $ax^n + \dots$).")
                     
                     try:
@@ -156,21 +216,28 @@ def show_input_page(header_container):
                                 col_bracket, col_guess = st.columns(2)
 
                                 with col_bracket:
-                                    st.markdown("#### 🎯 Bracketing")
+                                    st.markdown("#### Bracketing")
                                     st.caption("**Fujiwara's Bound:** (root isolation radius)")
                                     st.latex(r"R = 2 \cdot \max \left| \frac{a_{n-i}}{a_n} \right|^{1/i}")
                                     
+                                    st.metric("Theoretical Range (All Roots)", f"[{-calculated_bound}, {calculated_bound}]")
+                                    if st.button("Apply Theoretical Range", use_container_width=True, key="btn_theo"):
+                                        update_bounds(-calculated_bound, calculated_bound)
+                                        st.session_state.bench_data = None
+                                    
+                                    # st.divider()
+
                                     if best_bracket:
                                         a, b = best_bracket
-                                        st.metric("Suggested Bracket", f"[{a}, {b}]")
-                                        if st.button("Apply Bounds", use_container_width=True):
+                                        st.metric("Sign Change Bracket", f"[{a}, {b}]")
+                                        if st.button("Apply Sign Change Bracket", use_container_width=True, key="btn_sign"):
                                             update_bounds(a, b)
                                             st.session_state.bench_data = None
                                     else:
-                                        st.warning(f"⚠️ No sign change found in [{-calculated_bound}, {calculated_bound}]")
+                                        st.warning(f"No sign change found in [{-calculated_bound}, {calculated_bound}]", icon=":material/warning:")
 
                                 with col_guess:
-                                    st.markdown("#### 💡 Initial Guess")
+                                    st.markdown("#### Initial Guess")
                                     st.caption("**Centroid of Roots:**")
                                     st.latex(r"x_0 = -\frac{a_{n-1}}{n \cdot a_n}")
                                     vspace(0)
@@ -182,18 +249,14 @@ def show_input_page(header_container):
                             else:
                                 st.warning("Polynomial degree too low.")
                         else:
-                            st.warning("⚠️ Analysis skipped. Function is not a polynomial.")
+                            st.warning("Analysis skipped. Function is not a polynomial.", icon=":material/warning:")
                     except Exception as e:
                         st.error(f"Analysis failed: {str(e)}")
             # ---------------------------------------
-
-        else: 
-            st.error("Invalid Syntax")
-
-    # --- RIGHT COLUMN: CONFIGURATION ---
+    
     with col_config:
         with st.container(border=True):
-            st.subheader("2. Configuration")
+            st.subheader("Configuration")
             st.markdown(
                 """
         <style>
@@ -222,18 +285,18 @@ def show_input_page(header_container):
 
             if app_mode == "Multi-Root Scanner":
                 c1, c2 = st.columns(2)
-                with c1: st.number_input("Start (a)", key="range_a", on_change=sync_to_url, args=("range_a",))
-                with c2: st.number_input("End (b)", key="range_b", on_change=sync_to_url, args=("range_b",))
+                with c1: st.number_input("Start (a)", value=st.session_state.range_a, key="input_a", on_change=update_from_widget, args=("range_a", "input_a"))
+                with c2: st.number_input("End (b)", value=st.session_state.range_b, key="input_b", on_change=update_from_widget, args=("range_b", "input_b"))
                 
                 p_step = st.number_input(
                     "Step Size", 
-                    key="scanner_step", 
-                    value=0.15,
+                    value=st.session_state.scanner_step,
+                    key="input_step", 
                     min_value=0.0001, format="%.4f", step=0.05,
-                    on_change=sync_to_url, args=("scanner_step",)
+                    on_change=update_from_widget, args=("scanner_step", "input_step")
                 )
                 
-                if st.button("Start Scan", type="primary", use_container_width=True, icon="🔍"):
+                if st.button("Start Scan", type="primary", use_container_width=True, icon=":material/search:"):
                     if solver.valid:
                         st.session_state.bench_data = None
                         st.session_state.solver = solver
@@ -258,12 +321,12 @@ def show_input_page(header_container):
                     )
                 with c2: pass 
                 c3, c4 = st.columns(2)
-                with c3: st.number_input("Bracket Low (a)", key="range_a", on_change=sync_to_url, args=("range_a",))
-                with c4: st.number_input("Bracket High (b)", key="range_b", on_change=sync_to_url, args=("range_b",))
+                with c3: st.number_input("Bracket Low (a)", value=st.session_state.range_a, key="input_a", on_change=update_from_widget, args=("range_a", "input_a"))
+                with c4: st.number_input("Bracket High (b)", value=st.session_state.range_b, key="input_b", on_change=update_from_widget, args=("range_b", "input_b"))
                 
-                st.text_input("g(x) [Fixed Point]", key="g_str", on_change=sync_to_url, args=("g_str",))
+                st.text_input("g(x) [Fixed Point]", value=st.session_state.g_str, key="input_g", on_change=update_from_widget, args=("g_str", "input_g"))
 
-                if st.button("Run Benchmark", type="primary", use_container_width=True, icon="🚀"):
+                if st.button("Run Benchmark", type="primary", use_container_width=True, icon=":material/rocket_launch:"):
                     if not solver.valid: st.error("Fix syntax first.")
                     else:
                         df = solver.run_benchmark(st.session_state.x0_val, st.session_state.range_a, st.session_state.range_b, st.session_state.g_str, tol=0.01)

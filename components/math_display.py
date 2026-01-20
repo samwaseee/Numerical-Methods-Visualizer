@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 def display_math_analysis(method, row, solver, extra_params=None):
-    st.subheader("🧮 Step-by-Step Analysis")
+    st.subheader("Step-by-Step Analysis")
     
     # --- 1. SCANNING ANALYSIS ---
     if method == "Find All Roots (Scan)":
@@ -27,13 +27,13 @@ def display_math_analysis(method, row, solver, extra_params=None):
         if "YES" in str(sign_change):
             st.success(f"""
             **Result:** Negative Product (< 0).
-            ✅ **Sign Change Detected!**
-            """)
+            **Sign Change Detected!**
+            """, icon=":material/check_circle:")
         else:
             st.info(f"""
             **Result:** Positive Product (> 0).
-            ❌ **No Sign Change.**
-            """)
+            **No Sign Change.**
+            """, icon=":material/info:")
 
     # --- 2. BISECTION / FALSE POSITION ---
     elif method in ["Bisection Method", "False Position"]:
@@ -43,7 +43,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         fc = row['f(c)']
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             if method == "Bisection Method":
                 st.markdown("""
                 **Bisection Method** divides the interval in half at each step.
@@ -89,7 +89,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         with col2:
             st.metric("f(c) Value", f"{fc}")
         with col3:
-            status = "✅ Converging" if converging else "⏳ Still narrowing"
+            status = "Converging" if converging else "Still narrowing"
             st.metric("Status", status)
         
         if solver.f(a) * fc < 0:
@@ -105,7 +105,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         x_new = row['x_new']
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             st.markdown("""
             **Newton-Raphson Method** uses tangent lines to find roots.
             
@@ -141,7 +141,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         with col2:
             st.metric("|f(x)|", f"{abs(fx)}")
         with col3:
-            status = "✅ Converged" if converging else "🚀 Fast approach"
+            status = "Converged" if converging else "Fast approach"
             st.metric("Status", status)
 
     # --- 4. SECANT METHOD ---
@@ -153,7 +153,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         fx_curr = solver.f(x_curr)
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             st.markdown("""
             **Secant Method** approximates the derivative using two points.
             
@@ -186,7 +186,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         with col2:
             st.metric("|f(x)|", f"{abs(fx_curr)}")
         with col3:
-            status = "✅ Good" if step_size < 0.01 else "⏳ Progressing"
+            status = "Good" if step_size < 0.01 else "Progressing"
             st.metric("Status", status)
 
     # --- 5. FIXED POINT ---
@@ -195,7 +195,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         x_new = row['x_new']
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             st.markdown("""
             **Fixed Point Iteration** rearranges f(x)=0 to x=g(x) form.
             
@@ -214,9 +214,9 @@ def display_math_analysis(method, row, solver, extra_params=None):
         try:
             g_prime = (solver.f(x_old + 0.0001) - solver.f(x_old)) / 0.0001
             convergence_check = abs(g_prime) < 1
-            status_text = "✅ Will converge" if convergence_check else "❌ May diverge"
+            status_text = "Will converge" if convergence_check else "May diverge"
         except:
-            status_text = "⚠️ Check convergence"
+            status_text = "Check convergence"
             g_prime = None
         
         st.markdown(f"""
@@ -246,7 +246,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         x_new = row['x_new']
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             st.markdown("""
             **Halley's Method** uses first AND second derivatives for faster convergence.
             
@@ -283,7 +283,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         with col2:
             st.metric("|f(x)|", f"{abs(fx)}")
         with col3:
-            status = "🚀 Very fast" if step_size < 0.0001 else "✅ Converging fast"
+            status = "Very fast" if step_size < 0.0001 else "Converging fast"
             st.metric("Status", status)
 
     # --- 7. MULLER'S METHOD ---
@@ -294,7 +294,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         D = row.get('D', 0)
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             st.markdown("""
             **Muller's Method** fits a parabola through 3 points.
             
@@ -310,6 +310,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         st.markdown(f"**Iteration {row['Iter']}:**")
         st.markdown("🔷 Fitting a parabola through 3 recent points...")
         
+        st.markdown("Fitting a parabola through 3 recent points...")
         st.latex(r"x_{new} = p_2 - \frac{2c}{b \pm \sqrt{b^2 - 4ac}}")
         
         col1, col2, col3 = st.columns(3)
@@ -324,7 +325,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
                 st.metric("Discriminant", f"{D}")
         
         if isinstance(D, complex):
-            st.warning(f"⚠️ Complex Root Found: Discriminant = {D}\n\nThis method can find complex roots! Result uses complex arithmetic.")
+            st.warning(f"Complex Root Found: Discriminant = {D}\n\nThis method can find complex roots! Result uses complex arithmetic.", icon=":material/warning:")
         
         st.markdown(f"""
         **Previous Points:** $p_0 = {p0}, p_2 = {p2}$
@@ -343,7 +344,7 @@ def display_math_analysis(method, row, solver, extra_params=None):
         f_x = row.get('f(x)', 0)
         
         # Theory Tab
-        with st.expander("📚 How It Works", expanded=False):
+        with st.expander("How It Works", expanded=False, icon=":material/menu_book:"):
             st.markdown("""
             **Brent's Method** is an ADAPTIVE hybrid algorithm.
             
@@ -361,20 +362,20 @@ def display_math_analysis(method, row, solver, extra_params=None):
         
         # Strategy indicator with colors and formulas
         if strategy == "Bisection":
-            st.warning(f"⚡ **Strategy:** {strategy} (safe fallback)")
+            st.warning(f"**Strategy:** {strategy} (safe fallback)", icon=":material/bolt:")
             st.latex(r"x_{new} = \frac{a + b}{2}")
             st.markdown("""
             **Why fallback?** The interpolation estimate was outside [a,b] or too unreliable.
             Bisection is slower but guarantees the bracket shrinks.
             """)
         elif strategy == "Converged":
-            st.success(f"✅ **Status:** {strategy}")
+            st.success(f"**Status:** {strategy}", icon=":material/check_circle:")
             st.markdown(f"Root found! $x_{{new}} = {x_new}$")
         elif strategy == "No Bracket":
-            st.error(f"❌ **Problem:** {strategy}")
+            st.error(f"**Problem:** {strategy}", icon=":material/error:")
             st.markdown("f(a) and f(b) have same sign - cannot guarantee a root in [a,b]")
         else:
-            st.info(f"⚡ **Strategy:** {strategy} (quadratic interpolation)")
+            st.info(f"**Strategy:** {strategy} (quadratic interpolation)", icon=":material/bolt:")
             st.latex(r"x_{new} = x_{old} - \frac{f(x_{old})}{\text{Inverse Quadratic Approximation}}")
             st.markdown("""
             **Inverse Quadratic Interpolation (IQI):**

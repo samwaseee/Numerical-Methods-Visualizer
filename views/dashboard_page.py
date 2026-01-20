@@ -94,7 +94,7 @@ def show_dashboard_page(header_container):
     with header_container.container():
         render_function_header(solver)
     
-    if st.button("Back", icon="⬅️", on_click=trigger_back_to_results): pass
+    if st.button("Back", icon=":material/arrow_back:", on_click=trigger_back_to_results): pass
     
     # --- HELPER TO RUN METHODS ---
     def run_method(name, params):
@@ -125,7 +125,7 @@ def show_dashboard_page(header_container):
 
     # --- COMPARISON MODE LOGIC ---
     if p.get('method') == "Comparison Mode":
-        st.title("⚔️ Method Comparison Race")
+        st.title("Method Comparison Race")
         
         hist_a = run_method(p['method_a'], p)
         hist_b = run_method(p['method_b'], p)
@@ -133,7 +133,7 @@ def show_dashboard_page(header_container):
         render_comparison_chart(solver, hist_a, p['method_a'], hist_b, p['method_b'])
 
         # 4. Render Stats Table
-        st.subheader("📊 Performance Analysis")
+        st.subheader("Performance Analysis")
         col1, col2 = st.columns(2)
         
         def show_stat(col, name, hist):
@@ -181,16 +181,37 @@ def show_dashboard_page(header_container):
                     if expr.is_polynomial(x_sym):
                         degree = sp.degree(expr, x_sym)
                         if len(roots_list) < degree:
-                            st.warning(f"Found {len(roots_list)}/{degree} roots.", icon="⚠️")
+                            st.warning(f"Found {len(roots_list)}/{degree} roots.", icon=":material/warning:")
                         else:
-                            st.success("All roots found.", icon="✅")
+                            st.success("All roots found.", icon=":material/check_circle:")
                 except: pass
+
+        # --- MODIFY SCAN PARAMETERS ---
+        with st.expander("Modify Scan Range", expanded=False, icon=":material/tune:"):
+            c1, c2, c3 = st.columns(3)
+            with c1: 
+                new_a = st.number_input("Start (a)", value=float(p['a']), key="dash_scan_a")
+            with c2: 
+                new_b = st.number_input("End (b)", value=float(p['b']), key="dash_scan_b")
+            with c3:
+                new_step = st.number_input("Step Size", value=float(p['step']), step=0.05, format="%.4f", key="dash_scan_step")
+            
+            if st.button("Update Scan", type="primary", use_container_width=True):
+                st.session_state.params['a'] = new_a
+                st.session_state.params['b'] = new_b
+                st.session_state.params['step'] = new_step
+                # Sync global state so it persists if user goes back
+                st.session_state.range_a = new_a
+                st.session_state.range_b = new_b
+                st.session_state.scanner_step = new_step
+                st.rerun()
+        # ------------------------------
 
         current_scan_row, step_idx = render_scanner_chart(solver, p['a'], p['b'], p['step'], roots_list, scan_log)
         
         st.markdown("---")
         
-        st.subheader("📊 Scan Details")
+        st.subheader("Scan Details")
         st.caption("Why does an interval have a root? Look for **YES** in the 'Sign Change' column ($f(a) \cdot f(b) < 0$).")
         
         if scan_log:
@@ -229,16 +250,20 @@ def show_dashboard_page(header_container):
         # Check if root is complex (for Muller's method)
         is_complex_root = isinstance(root_found, complex) or (hasattr(np, 'iscomplex') and np.iscomplex(root_found))
         
+        # Professional SVG Icons
+        check_svg = """<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#10b981" style="vertical-align: middle; margin-right: 8px;"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>"""
+        complex_svg = """<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#f43f5e" style="vertical-align: middle; margin-right: 8px;"><path d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/></svg>"""
+
         if root_found is not None:
             col_root, col_verify = st.columns([1, 1])
             with col_root:
                 if is_complex_root:
-                    st.markdown(f"<h3 style='text-align: center; color: #f43f5e;'>✓ Complex Root Found</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='text-align: center; color: #f43f5e;'>{complex_svg}Complex Root Found</h3>", unsafe_allow_html=True)
                     real_part = root_found.real if hasattr(root_found, 'real') else float(root_found)
                     imag_part = root_found.imag if hasattr(root_found, 'imag') else 0
                     st.markdown(f"<h1 style='text-align: center; color: #f43f5e; font-weight: bold;'>{real_part} + {imag_part}i</h1>", unsafe_allow_html=True)
                 else:
-                    st.markdown(f"<h3 style='text-align: center; color: #10b981;'>✓ Root Found</h3>", unsafe_allow_html=True)
+                    st.markdown(f"<h3 style='text-align: center; color: #10b981;'>{check_svg}Root Found</h3>", unsafe_allow_html=True)
                     st.markdown(f"<h1 style='text-align: center; color: #10b981; font-weight: bold;'>{root_found:.4f}</h1>", unsafe_allow_html=True)
             with col_verify:
                 try:

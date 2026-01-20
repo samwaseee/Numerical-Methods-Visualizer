@@ -3,31 +3,11 @@ import numpy as np
 import pandas as pd
 from components.header import render_function_header
 
-def trigger_home():
-    """
-    Resets EVERYTHING to default values and navigates home.
-    No st.rerun() needed here (it happens automatically).
-    """
-    # 1. Reset Session State to Defaults
-    defaults = {
-        "func_str": "x^4 + 6*x^3 - 77*x^2 - 330*x + 400",
-        "x0_val": 3.0,
-        "range_a": -10.0,
-        "range_b": 10.0,
-        "scanner_step": 0.15,
-        "bench_data": None,
-        "solver": None,
-        "page": "input"
-    }
-    
-    for key, val in defaults.items():
-        st.session_state[key] = val
-        
-    # 2. Reset Dependent Variables
-    st.session_state.g_str = f"x - ({defaults['func_str']})/1000"
-    
-    # 3. Clear Browser URL (Force Reset)
-    st.query_params.clear()
+def trigger_input():
+    """Returns to input page while preserving data for editing"""
+    st.session_state.page = "input"
+    st.query_params["page"] = "input"
+    st.session_state.bench_data = None
 
 # --- SAFETY HELPER ---
 def ensure_state_exists():
@@ -86,7 +66,7 @@ def show_result_page(header_container):
         render_function_header(solver)
 
     # --- THE BACK BUTTON ---
-    if st.button("Back to Home", icon="🏠", on_click=trigger_home): pass
+    if st.button("Back to Input", icon=":material/arrow_back:", on_click=trigger_input): pass
     
     st.title("Benchmark Results & Analysis")
 
@@ -102,7 +82,7 @@ def show_result_page(header_container):
 
     st.markdown("---")
 
-    st.subheader("🛠️ Modify Parameters")
+    st.subheader("Modify Parameters")
     
     # --- FIXED POINT DIAGNOSTIC ---
     if st.session_state.bench_data is not None:
@@ -114,12 +94,12 @@ def show_result_page(header_container):
                 if denom == 0: denom = 1
                 current_func = st.session_state.func_str
                 st.warning(
-                    f"⚠️ **Fixed Point Diverged?**\n\n"
+                    f"**Fixed Point Diverged?**\n\n"
                     f"The derivative $f'({st.session_state.x0_val})$ is **{deriv:.2f}**.\n"
                     f"For convergence, the denominator must match this sign.\n\n"
                     f"👉 **Suggested Fix:** Change $g(x)$ to:\n"
                     f"`x - ({current_func}) / {denom}`",
-                    icon="💡"
+                    icon=":material/lightbulb:"
                 )
             except: pass
 
@@ -159,7 +139,7 @@ def show_result_page(header_container):
                 on_change=update_g
             )
             
-            if st.button("Recalculate Table", icon="🔄", use_container_width=True):
+            if st.button("Recalculate Table", icon=":material/refresh:", use_container_width=True):
                 run_math()
                 st.rerun()
 
@@ -202,7 +182,7 @@ def show_result_page(header_container):
         st.markdown("---")
         
         # --- COMPARISON MODE TRIGGER ---
-        st.subheader("⚔️ Compare Two Methods")
+        st.subheader("Compare Two Methods")
         c_m1, c_m2 = st.columns(2)
         with c_m1:
             m1 = st.selectbox("Method A", methods, index=0)
@@ -211,7 +191,7 @@ def show_result_page(header_container):
             
         if st.button("Start Comparison Race", type="primary", use_container_width=True):
             if m1 == m2:
-                st.error("Please select two **different** methods to compare.", icon="🚫")
+                st.error("Please select two **different** methods to compare.", icon=":material/block:")
             else:
                 st.session_state.params = {
                     "method": "Comparison Mode",
