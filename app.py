@@ -9,12 +9,40 @@ import views.interpolation_page as interpolation_view
 import views.differentiation_page as differentiation_view
 import views.integration_page as integration_view
 import views.fitting_page as fitting_view
+import views.linear_page as linear_view
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Numerical Methods Visualizer", page_icon="logo.svg")
 
 # --- 2. INITIALIZE STATE ---
 input_view.initialize_session_state()
+
+# --- 3. DARK MODE SETTINGS ---
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+if st.session_state.dark_mode:
+    st.markdown("""
+        <style>
+            .stApp {
+                background-color: #0E1117;
+                color: #FAFAFA;
+            }
+            [data-testid="stSidebar"] {
+                background-color: #262730;
+            }
+            [data-testid="stHeader"] {
+                background-color: rgba(0,0,0,0);
+            }
+            .stTextInput > div > div, .stNumberInput > div > div, .stSelectbox > div > div {
+                background-color: #1F2937;
+                color: #FAFAFA;
+            }
+            h1, h2, h3, h4, h5, h6, label {
+                color: #FAFAFA !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
 # --- 4. NAVIGATION ROUTER ---
 render_navbar()
@@ -212,6 +240,37 @@ def render_landing_page():
 
     st.write("")
 
+    # --- SECTION 6: LINEAR ALGEBRA ---
+    with st.container(border=True):
+        c_text, c_viz = st.columns([1, 1.5], gap="large")
+        with c_text:
+            st.subheader("Linear Systems")
+            st.markdown("Solve systems of linear equations $Ax=B$ using direct and iterative methods.")
+            st.markdown("""
+            **Capabilities:**
+            - Gauss Elimination & Jordan
+            - Jacobi & Gauss-Seidel
+            - Step-by-step Matrix Operations
+            """)
+            st.write("")
+            if st.button("Launch Linear Solver", type="primary", icon=":material/grid_on:"):
+                st.session_state.page = "linear"
+                st.query_params["page"] = "linear"
+                st.rerun()
+        
+        with c_viz:
+            # Mini Graph
+            x = np.linspace(-5, 5, 10)
+            y1 = 1 - x
+            y2 = x + 2
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=y1, mode='lines', line=dict(color='#4EA5FF')))
+            fig.add_trace(go.Scatter(x=x, y=y2, mode='lines', line=dict(color='#A855F7')))
+            fig.update_layout(showlegend=False, margin=dict(l=0,r=0,t=0,b=0), height=200, xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
+
+    st.write("")
+
 current_page = st.session_state.page
 
 if current_page == "landing":
@@ -230,6 +289,8 @@ elif current_page == "integration":
     integration_view.show_integration_page()
 elif current_page == "fitting":
     fitting_view.show_fitting_page()
+elif current_page == "linear":
+    linear_view.show_linear_page()
 
 # Sync Page to URL
 if st.query_params.get("page") != current_page:
