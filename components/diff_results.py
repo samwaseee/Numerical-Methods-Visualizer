@@ -812,6 +812,20 @@ def render_differentiation_results(res, df_table, method, orig_data, target_x, e
         # --- 3. DIFFERENCE/COEFFICIENT TABLE ---
     if df_table is not None:
         with st.expander("Difference/Coefficient Table"):
+            # 1. Create a copy so we don't break the original data for math later
+            df_display = df_table.copy()
+            
+            # 2. Identify which columns to format
             exclude_cols = ["Interval", "Term", "i", "Step"]
-            format_dict = {c: "{:.3f}" for c in df_table.columns if c not in exclude_cols}
-            st.dataframe(df_table.style.format(format_dict, na_rep=""), use_container_width=True, height=250)
+            target_cols = [c for c in df_display.columns if c not in exclude_cols]
+
+            # 3. Apply formatting directly to the data
+            for col in target_cols:
+                # Convert the column to String/Object type
+                df_display[col] = df_display[col].apply(
+                    lambda x: "" if pd.isna(x) or str(x).strip() == "None" 
+                    else "{:.4f}".format(float(x))
+                )
+
+            # 4. Display the Clean Dataframe
+            st.dataframe(df_display, use_container_width=True, height=250)

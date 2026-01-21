@@ -7,6 +7,8 @@ import views.result_page as result_view
 import views.dashboard_page as dashboard_view
 import views.interpolation_page as interpolation_view
 import views.differentiation_page as differentiation_view
+import views.integration_page as integration_view
+import views.fitting_page as fitting_view
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Numerical Methods Visualizer", page_icon="logo.svg")
@@ -109,8 +111,42 @@ def render_landing_page():
             st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
 
     st.write("")
+    
+    # --- SECTION 3: CURVE FITTING ---
+    with st.container(border=True):
+        c_text, c_viz = st.columns([1, 1.5], gap="large")
+        with c_text:
+            st.subheader("Curve Fitting")
+            st.markdown("Fit smooth curves (Linear, Polynomial, Exponential) to noisy data using regression analysis.")
+            st.markdown("""
+            **Capabilities:**
+            - Regression Analysis ($R^2$ Score)
+            - Residual Visualization
+            - Predictive Modeling
+            """)
+            st.write("")
+            if st.button("Launch Curve Fitting", type="primary", icon=":material/analytics:"):
+                st.session_state.page = "fitting"
+                st.query_params["page"] = "fitting"
+                st.rerun()
+        
+        with c_viz:
+            # Mini Graph for Fitting
+            x = np.linspace(0, 5, 20); y_noise = 0.5*x + 1 + np.random.normal(0, 0.2, 20)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=y_noise, mode='markers', marker=dict(color='#ef4444', size=6)))
+            fig.add_trace(go.Scatter(x=x, y=0.5*x+1, mode='lines', line=dict(color='#6366f1', width=2)))
+            fig.update_layout(
+                showlegend=False, margin=dict(l=0, r=0, t=0, b=0), height=200, 
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
+            )
+            st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
 
-    # --- SECTION 3: DIFFERENTIATION ---
+    st.write("")
+
+    # --- SECTION 4: DIFFERENTIATION ---
     with st.container(border=True):
         c_text, c_viz = st.columns([1, 1.5], gap="large")
         with c_text:
@@ -139,6 +175,42 @@ def render_landing_page():
                 showlegend=False,
                 margin=dict(l=0, r=0, t=0, b=0), height=200, xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
+    st.write("")
+    
+    # --- SECTION 5: INTEGRATION ---
+    with st.container(border=True):
+        c_text, c_viz = st.columns([1, 1.5], gap="large")
+        with c_text:
+            st.subheader("Integration")
+            st.markdown("Calculate the definite integral $\\int_a^b f(x) dx$ using numerical methods.")
+            st.markdown("""
+            **Capabilities:**
+            - Trapezoidal, Simpson's 1/3 & 3/8, Weddle's
+            - Step-by-step formula substitution
+            - Area visualization
+            """)
+            st.write("")
+            if st.button("Launch Integration", type="primary", icon=":material/functions:"):
+                st.session_state.page = "integration"
+                st.query_params["page"] = "integration"
+                st.rerun()
+        
+        with c_viz:
+            # Mini Graph for Integration
+            x = np.linspace(0, 3, 100)
+            y = x**2 * np.exp(-x)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=y, fill='tozeroy', mode='lines', line=dict(color='#8B5CF6', width=3)))
+            fig.update_layout(
+                showlegend=False,
+                margin=dict(l=0, r=0, t=0, b=0), height=200, 
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False), 
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)'
+            )
+            st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
+
+    st.write("")
 
 current_page = st.session_state.page
 
@@ -154,6 +226,10 @@ elif current_page == "interpolation":
     interpolation_view.show_interpolation_page()
 elif current_page == "differentiation":
     differentiation_view.show_differentiation_page()
+elif current_page == "integration":
+    integration_view.show_integration_page()
+elif current_page == "fitting":
+    fitting_view.show_fitting_page()
 
 # Sync Page to URL
 if st.query_params.get("page") != current_page:

@@ -1,5 +1,6 @@
 import streamlit as st
 import sympy as sp
+import pandas as pd
 
 def render_result(solver, df_table, expr, method_name, inverse=False):
     """
@@ -99,8 +100,22 @@ def render_result(solver, df_table, expr, method_name, inverse=False):
             
             st.divider()
             
+            # 1. Create a copy so we don't break the original data for math later
+            df_display = df_table.copy()
+            
+            # 2. Identify which columns to format
             exclude_cols = ["Interval", "Term", "i"]
-            format_dict = {c: "{:.3f}" for c in df_table.columns if c not in exclude_cols}
-            st.dataframe(df_table.style.format(format_dict, na_rep=""), use_container_width=True)
+            target_cols = [c for c in df_display.columns if c not in exclude_cols]
+
+            # 3. Apply formatting directly to the data
+            for col in target_cols:
+                # Convert the column to String/Object type
+                df_display[col] = df_display[col].apply(
+                    lambda x: "" if pd.isna(x) or str(x).strip() == "None" 
+                    else "{:.4f}".format(float(x))
+                )
+
+            # 4. Display the Clean Dataframe
+            st.dataframe(df_display, use_container_width=True)
             
     return eval_result

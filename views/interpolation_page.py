@@ -4,6 +4,7 @@ from algorithms_interpolation import InterpolationSolver
 from components.interp_results import render_result
 from components.interp_graph import render_interpolation_chart
 
+
 def show_interpolation_page():
     if st.button("Back to Home", icon=":material/home:"):
         # 1. LIST the specific keys you want to kill
@@ -18,10 +19,9 @@ def show_interpolation_page():
         st.session_state.page = "landing"
         st.query_params["page"] = "landing"
         st.rerun()
-        
-        
+
     st.title("Interpolation Tool")
-    
+
     if "results_ready" not in st.session_state:
         st.session_state.results_ready = False
 
@@ -30,41 +30,54 @@ def show_interpolation_page():
 
     # --- LAYOUT ---
     col_data, col_main = st.columns([1, 2.5], gap="large")
-    
+
     # --- 1. LEFT COLUMN: DATA ENTRY ---
     with col_data:
         st.subheader("Data Points")
         if "interp_data" not in st.session_state:
             st.session_state.interp_data = pd.DataFrame(
-                {"x": [0.0, 1.0, 2.0, 3.0, 4.0], "y": [1.0, 12.0, 5.0, 8.0, 15.0], "yp": [0.0]*5}
+                {
+                    "x": [0.0, 1.0, 2.0, 3.0, 4.0,],
+                    "y": [1.0, 12.0, 5.0, 8.0, 15.0],
+                    "yp": [0.0] * 5,
+                }
             )
-        
+
         # Ensure yp column exists (migration for existing sessions)
         if "yp" not in st.session_state.interp_data.columns:
             st.session_state.interp_data["yp"] = 0.0
 
         # Determine if we need to show yp
-        # We need to peek at the method selection, but it's defined later. 
+        # We need to peek at the method selection, but it's defined later.
         # We'll use a session state flag or just check the widget if it exists, defaulting to False.
         show_yp = st.session_state.get("is_hermite", False)
-        
+
         cols_to_show = ["x", "y", "yp"] if show_yp else ["x", "y"]
-        st.dataframe(st.session_state.interp_data[cols_to_show], use_container_width=True, hide_index=True)
+        st.dataframe(
+            st.session_state.interp_data[cols_to_show],
+            use_container_width=True,
+            hide_index=True,
+        )
 
         # Add Point
         c_add = st.columns(3 if show_yp else 2)
-        with c_add[0]: new_x = st.number_input("x", value=0.0, step=1.0, key="new_x")
-        with c_add[1]: new_y = st.number_input("y", value=0.0, step=1.0, key="new_y")
+        with c_add[0]:
+            new_x = st.number_input("x", value=0.0, step=1.0, key="new_x")
+        with c_add[1]:
+            new_y = st.number_input("y", value=0.0, step=1.0, key="new_y")
         new_yp = 0.0
         if show_yp:
-            with c_add[2]: new_yp = st.number_input("y'", value=0.0, step=1.0, key="new_yp")
-        
+            with c_add[2]:
+                new_yp = st.number_input("y'", value=0.0, step=1.0, key="new_yp")
+
         if st.button("Add Point", use_container_width=True):
-            new_row = pd.DataFrame([{'x': new_x, 'y': new_y, 'yp': new_yp}])
-            st.session_state.interp_data = pd.concat([st.session_state.interp_data, new_row], ignore_index=True)
+            new_row = pd.DataFrame([{"x": new_x, "y": new_y, "yp": new_yp}])
+            st.session_state.interp_data = pd.concat(
+                [st.session_state.interp_data, new_row], ignore_index=True
+            )
             reset_results()
             st.rerun()
-            
+
         # Controls
         b1, b2 = st.columns(2)
         with b1:
@@ -74,7 +87,9 @@ def show_interpolation_page():
                 st.rerun()
         with b2:
             if st.button("Clear All", use_container_width=True):
-                st.session_state.interp_data = pd.DataFrame(columns=['x', 'y', 'yp']).astype(float)
+                st.session_state.interp_data = pd.DataFrame(
+                    columns=["x", "y", "yp"]
+                ).astype(float)
                 reset_results()
                 st.rerun()
 
@@ -85,38 +100,47 @@ def show_interpolation_page():
             "Interpolation Category",
             ["Equal Intervals", "Unequal Intervals", "Inverse Interpolation"],
             horizontal=True,
-            on_change=reset_results
+            on_change=reset_results,
         )
-        
+
         st.divider()
-        
+
         # --- METHOD SELECTOR BASED ON CATEGORY ---
         method = None
-        
+
         if category == "Equal Intervals":
-            method = st.selectbox("Method", [
-                "Newton Forward", 
-                "Newton Backward", 
-                "Gauss Forward", 
-                "Gauss Backward",
-                "Stirling's Formula",
-                "Bessel's Formula"
-            ], on_change=reset_results)
-            
+            method = st.selectbox(
+                "Method",
+                [
+                    "Newton Forward",
+                    "Newton Backward",
+                    "Gauss Forward",
+                    "Gauss Backward",
+                    "Stirling's Formula",
+                    "Bessel's Formula",
+                ],
+                on_change=reset_results,
+            )
+
         elif category == "Unequal Intervals":
-            method = st.selectbox("Method", [
-                "Lagrange Interpolation", 
-                "Newton Divided Difference",
-                "Hermite Interpolation",
-                "Cubic Spline Interpolation"
-            ], on_change=reset_results)
-            
+            method = st.selectbox(
+                "Method",
+                [
+                    "Lagrange Interpolation",
+                    "Newton Divided Difference",
+                    "Hermite Interpolation",
+                    "Cubic Spline Interpolation",
+                ],
+                on_change=reset_results,
+            )
+
         elif category == "Inverse Interpolation":
             st.info("Finds x for a given y. Swaps axes (Input Y -> Output X).")
-            method = st.selectbox("Method", [
-                "Inverse Lagrange",
-                "Inverse Newton Divided Difference"
-            ], on_change=reset_results)
+            method = st.selectbox(
+                "Method",
+                ["Inverse Lagrange", "Inverse Newton Divided Difference"],
+                on_change=reset_results,
+            )
 
         # Update Hermite Flag for UI
         if method == "Hermite Interpolation":
@@ -129,7 +153,9 @@ def show_interpolation_page():
                 st.rerun()
 
         # --- CALCULATE BUTTON ---
-        if st.button("Calculate Polynomial", type="primary", icon=":material/calculate:"):
+        if st.button(
+            "Calculate Polynomial", type="primary", icon=":material/calculate:"
+        ):
             st.session_state.results_ready = True
 
         # --- EXECUTION LOGIC ---
@@ -143,32 +169,32 @@ def show_interpolation_page():
             # Handle Inverse: Swap X and Y
             if category == "Inverse Interpolation":
                 # For inverse interpolation, 'y' values must be unique
-                if df_data['y'].duplicated().any():
+                if df_data["y"].duplicated().any():
                     st.error(
                         "Inverse Interpolation requires all 'y' values to be unique. "
                         "Please edit your data to remove duplicate y-entries.",
-                        icon="❗"
+                        icon=":material/error:",
                     )
                     return
-                solver = InterpolationSolver(df_data['y'].values, df_data['x'].values)
+                solver = InterpolationSolver(df_data["y"].values, df_data["x"].values)
                 is_inverse = True
             else:
                 # For standard interpolation, 'x' values must be unique
-                if df_data['x'].duplicated().any():
+                if df_data["x"].duplicated().any():
                     st.error(
                         "Interpolation requires all 'x' values to be unique. "
                         "Please edit your data to remove duplicate x-entries.",
-                        icon="❗"
+                        icon=":material/error:",
                     )
                     return
-                solver = InterpolationSolver(df_data['x'].values, df_data['y'].values)
+                solver = InterpolationSolver(df_data["x"].values, df_data["y"].values)
                 is_inverse = False
 
             # Run Selected Method
             df_table = None
             expr = None
             err = None
-            
+
             if method == "Newton Forward":
                 df, expr, err = solver.newton_forward()
             elif method == "Newton Backward":
@@ -186,7 +212,7 @@ def show_interpolation_page():
             elif method == "Newton Divided Difference":
                 df, expr = solver.newton_divided_difference()
             elif method == "Hermite Interpolation":
-                df, expr, err = solver.hermite_interpolation(df_data['yp'].values)
+                df, expr, err = solver.hermite_interpolation(df_data["yp"].values)
             elif method == "Cubic Spline Interpolation":
                 df, expr, err = solver.cubic_spline_interpolation()
             elif method == "Inverse Newton Divided Difference":
@@ -198,7 +224,12 @@ def show_interpolation_page():
             else:
                 # 1. Render Results (Math + Table + Eval)
                 eval_pt = render_result(solver, df, expr, method, inverse=is_inverse)
-                
+
                 # 2. Render Graph
-                render_interpolation_chart(solver, df_data, eval_pt, inverse=is_inverse, show_tangents=(method == "Hermite Interpolation"))
-            
+                render_interpolation_chart(
+                    solver,
+                    df_data,
+                    eval_pt,
+                    inverse=is_inverse,
+                    show_tangents=(method == "Hermite Interpolation"),
+                )
