@@ -86,14 +86,21 @@ def render_result(solver, df_table, expr, method_name, inverse=False):
                 st.markdown("#### Cubic Spline Coefficients")
                 st.latex(r"S_i(x) = a_i + b_i(x-x_i) + c_i(x-x_i)^2 + d_i(x-x_i)^3")
             
+            elif any(x in method_name for x in ["Gauss", "Stirling", "Bessel"]):
+                st.markdown("#### Central Difference Formula ($\delta$)")
+                st.latex(r"\delta y_i = y_{i+1} - y_i")
+                st.latex(r"\delta^k y_i = \delta^{k-1} y_{i+1} - \delta^{k-1} y_i")
+
             else:
-                # Newton Forward, Gauss, Stirling, Bessel
-                st.markdown("#### Forward Difference Formula")
+                # Newton Forward
+                st.markdown("#### Forward Difference Formula ($\Delta$)")
                 st.latex(r"\Delta y_i = y_{i+1} - y_i")
                 st.latex(r"\Delta^k y_i = \Delta^{k-1} y_{i+1} - \Delta^{k-1} y_i")
             
             st.divider()
             
-            st.dataframe(df_table, use_container_width=True)
+            exclude_cols = ["Interval", "Term", "i"]
+            format_dict = {c: "{:.3f}" for c in df_table.columns if c not in exclude_cols}
+            st.dataframe(df_table.style.format(format_dict, na_rep=""), use_container_width=True)
             
     return eval_result

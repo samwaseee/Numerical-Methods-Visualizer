@@ -31,6 +31,29 @@ class InterpolationSolver:
                 table[i][j] = table[i+1][j-1] - table[i][j-1]
         return table
 
+    def _create_formatted_df(self, table, cols, shift_mode="forward"):
+        """
+        Creates a DataFrame with visual shifts for Backward/Central tables.
+        shift_mode: "forward" (0), "backward" (j), "central" (j//2), "central_backward" ((j+1)//2)
+        """
+        n = self.n
+        data = {"x": self.x_data}
+        
+        for j, col_name in enumerate(cols):
+            # j is the order of difference (0 to n-1)
+            if shift_mode == "backward": s = j
+            elif shift_mode == "central": s = j // 2
+            elif shift_mode == "central_backward": s = (j + 1) // 2
+            else: s = 0
+            
+            col_vals = []
+            for k in range(n):
+                src_row = k - s
+                val = table[src_row][j] if 0 <= src_row < n - j else np.nan
+                col_vals.append(val)
+            data[col_name] = col_vals
+        return pd.DataFrame(data)
+
     # --- NEWTON FORWARD ---
     def newton_forward(self):
         h = self.check_equal_spacing()
@@ -52,9 +75,7 @@ class InterpolationSolver:
         self.polynomial_str = str(sp.expand(expr))
         
         cols = [f"Δ^{j}y" for j in range(self.n)]
-        df = pd.DataFrame(table, columns=cols)
-        df.insert(0, "x", self.x_data)
-        return df, expr, None
+        return self._create_formatted_df(table, cols, "forward"), expr, None
 
     # --- NEWTON BACKWARD ---
     def newton_backward(self):
@@ -79,9 +100,7 @@ class InterpolationSolver:
         self.polynomial_str = str(sp.expand(expr))
         
         cols = [f"∇^{j}y" for j in range(self.n)]
-        df = pd.DataFrame(table, columns=cols)
-        df.insert(0, "x", self.x_data)
-        return df, expr, None
+        return self._create_formatted_df(table, cols, "backward"), expr, None
 
     # --- CENTRAL (GAUSS FORWARD) ---
     def central_difference(self):
@@ -93,7 +112,10 @@ class InterpolationSolver:
         # For simplicity in this context, we will use the same engine as Forward 
         # but the UI will explain the math. 
         # (Implementing full Gauss/Stirling symbolic logic is complex for this scope)
-        return self.newton_forward()
+        df, expr, err = self.newton_forward()
+        if df is not None:
+            df.columns = [c.replace('Δ', 'δ') for c in df.columns]
+        return df, expr, err
 
     # --- 1. LAGRANGE METHOD ---
     def lagrange_method(self):
@@ -204,10 +226,8 @@ class InterpolationSolver:
         self.polynomial_str = str(sp.expand(expr))
         
         # Table visualization
-        cols = [f"Δ^{j}y" for j in range(self.n)]
-        df = pd.DataFrame(table, columns=cols)
-        df.insert(0, "x", self.x_data)
-        return df, expr, None
+        cols = [f"δ^{j}y" for j in range(self.n)]
+        return self._create_formatted_df(table, cols, "central"), expr, None
 
     # --- 5. GAUSS BACKWARD INTERPOLATION ---
     def gauss_backward_method(self):
@@ -241,10 +261,8 @@ class InterpolationSolver:
         self.f = sp.lambdify(self.x_sym, expr, 'numpy')
         self.polynomial_str = str(sp.expand(expr))
         
-        cols = [f"Δ^{j}y" for j in range(self.n)]
-        df = pd.DataFrame(table, columns=cols)
-        df.insert(0, "x", self.x_data)
-        return df, expr, None
+        cols = [f"δ^{j}y" for j in range(self.n)]
+        return self._create_formatted_df(table, cols, "central_backward"), expr, None
 
     # --- 6. STIRLING'S FORMULA ---
     def stirling_method(self):
@@ -284,10 +302,8 @@ class InterpolationSolver:
         self.f = sp.lambdify(self.x_sym, expr, 'numpy')
         self.polynomial_str = str(sp.expand(expr))
         
-        cols = [f"Δ^{j}y" for j in range(self.n)]
-        df = pd.DataFrame(table, columns=cols)
-        df.insert(0, "x", self.x_data)
-        return df, expr, None
+        cols = [f"δ^{j}y" for j in range(self.n)]
+        return self._create_formatted_df(table, cols, "central"), expr, None
 
     # --- 7. BESSEL'S FORMULA ---
     def bessel_method(self):
@@ -330,10 +346,8 @@ class InterpolationSolver:
         self.f = sp.lambdify(self.x_sym, expr, 'numpy')
         self.polynomial_str = str(sp.expand(expr))
         
-        cols = [f"Δ^{j}y" for j in range(self.n)]
-        df = pd.DataFrame(table, columns=cols)
-        df.insert(0, "x", self.x_data)
-        return df, expr, None
+        cols = [f"δ^{j}y" for j in range(self.n)]
+        return self._create_formatted_df(table, cols, "central"), expr, None
 
     # --- 8. HERMITE INTERPOLATION ---
     def hermite_interpolation(self, y_prime):
