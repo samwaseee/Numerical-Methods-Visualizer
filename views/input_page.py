@@ -108,6 +108,10 @@ def show_input_page(header_container):
     initialize_session_state()
 
     if st.button("Back to Home", icon=":material/home:"):
+        for key in list(st.session_state.keys()):
+            if key != 'dark_mode':
+                del st.session_state[key]
+        st.query_params.clear()
         st.session_state.page = "landing"
         st.query_params["page"] = "landing"
         st.rerun()

@@ -7,15 +7,10 @@ from components.interp_graph import render_interpolation_chart
 
 def show_interpolation_page():
     if st.button("Back to Home", icon=":material/home:"):
-        # 1. LIST the specific keys you want to kill
-        keys_to_clear = ["interp_data", "results_ready", "editor"]
-
-        # 2. DELETE them if they exist
-        for key in keys_to_clear:
-            if key in st.session_state:
+        for key in list(st.session_state.keys()):
+            if key != 'dark_mode':
                 del st.session_state[key]
-
-        # 3. NOW navigate away
+        st.query_params.clear()
         st.session_state.page = "landing"
         st.query_params["page"] = "landing"
         st.rerun()

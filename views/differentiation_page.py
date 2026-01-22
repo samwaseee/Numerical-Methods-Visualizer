@@ -9,10 +9,10 @@ from components.diff_graph import render_differentiation_chart
 def show_differentiation_page():
     # --- NAVIGATION & CLEANUP ---
     if st.button("Back to Home", icon=":material/home:"):
-        keys_to_clear = ["diff_data", "diff_results", "true_func_str"]
-        for key in keys_to_clear:
-            if key in st.session_state:
+        for key in list(st.session_state.keys()):
+            if key != 'dark_mode':
                 del st.session_state[key]
+        st.query_params.clear()
         st.session_state.page = "landing"
         st.query_params["page"] = "landing"
         st.rerun()
