@@ -13,7 +13,7 @@ def render_result(solver, df_table, expr, method_name, inverse=False):
     # Convert expression to string for LaTeX
     # Note: The solver uses 'x' symbol. For inverse, we replace it visually.
     if expr is not None:
-        poly_latex = sp.latex(sp.sympify(str(expr)))
+        poly_latex = sp.latex(sp.sympify(str(expr).replace('^', '**')))
         if inverse:
             poly_latex = poly_latex.replace("x", "y")
             st.info(f"**x = P(y):** ${poly_latex}$")

@@ -10,6 +10,7 @@ import views.differentiation_page as differentiation_view
 import views.integration_page as integration_view
 import views.fitting_page as fitting_view
 import views.linear_page as linear_view
+import views.ode_page as ode_view
 
 # --- 1. CONFIGURATION ---
 st.set_page_config(layout="wide", page_title="Numerical Methods Visualizer", page_icon="logo.svg")
@@ -271,6 +272,38 @@ def render_landing_page():
 
     st.write("")
 
+    # --- SECTION 7: ODE SOLVER ---
+    with st.container(border=True):
+        c_text, c_viz = st.columns([1, 1.5], gap="large")
+        with c_text:
+            st.subheader("ODE Solver")
+            st.markdown("Solve Initial Value Problems (IVP) for first-order differential equations.")
+            st.markdown("""
+            **Capabilities:**
+            - Euler, Heun, RK4 Methods
+            - Slope Field Visualization
+            - Comparative Analysis
+            """)
+            st.write("")
+            if st.button("Launch ODE Solver", type="primary", icon=":material/waves:"):
+                st.session_state.page = "ode"
+                st.query_params["page"] = "ode"
+                st.rerun()
+        
+        with c_viz:
+            # Mini Graph
+            x = np.linspace(0, 4, 20)
+            y = np.exp(0.5*x)
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=y, mode='lines', line=dict(color='#10b981')))
+            # Add some arrows for slope field effect
+            for i in range(0, 20, 4):
+                fig.add_annotation(x=x[i], y=y[i], ax=10, ay=-10, showarrow=True, arrowhead=1, arrowwidth=1, arrowcolor="gray")
+            fig.update_layout(showlegend=False, margin=dict(l=0,r=0,t=0,b=0), height=200, xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig, use_container_width=True, config={'staticPlot': True})
+
+    st.write("")
+
 current_page = st.session_state.page
 
 if current_page == "landing":
@@ -291,6 +324,8 @@ elif current_page == "fitting":
     fitting_view.show_fitting_page()
 elif current_page == "linear":
     linear_view.show_linear_page()
+elif current_page == "ode":
+    ode_view.show_ode_page()
 
 # Sync Page to URL
 if st.query_params.get("page") != current_page:
