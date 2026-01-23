@@ -61,7 +61,7 @@ def render_navbar():
             <img src="data:image/svg+xml;base64,{b64_logo}">
             <div class="navbar-title">
                 <span style="background: -webkit-linear-gradient(45deg, #4EA5FF, #A855F7); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                    Numerical Methods Visualizer
+                    NMV
                 </span>
             </div>
         </div>
