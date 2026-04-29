@@ -75,7 +75,7 @@ def show_result_page(header_container):
         def style_status(val):
             return 'color: green; font-weight: bold' if val == "Converged" else 'color: red'
         st.dataframe(
-            df.style.applymap(style_status, subset=['Status']).format({"Error %": "{:.4f}", "Root Found": "{:.4f}"}), 
+            df.style.map(style_status, subset=['Status']).format({"Error %": "{:.4f}", "Root Found": "{:.4f}"}),
             use_container_width=True,
             hide_index=True
         )
